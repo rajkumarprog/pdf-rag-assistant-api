@@ -1,8 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from src.embeddings.embedding_generator import model
-from src.vector_store.chroma_store import search_chunks
+from src.vector_store.chroma_store import get_document_chunks
 from src.llm.gemini_service import ask_gemini
 
 router = APIRouter(
@@ -12,31 +11,30 @@ router = APIRouter(
 
 
 class SummaryRequest(BaseModel):
-    question: str = "Summarize this document."
+    document_id: str
 
 
 @router.post("/summary")
 def summarize_document(request: SummaryRequest):
 
-    query_embedding = model.encode(request.question)
+    # Use the beginning of the document (in order) rather than a similarity search
+    chunks = get_document_chunks(request.document_id)
+    if not chunks:
+        raise HTTPException(
+            status_code=404,
+            detail="Document not found or not indexed"
+        )
 
-    results = search_chunks(query_embedding)
+    question = (
+        "Generate:\n"
+        "1. Executive Summary\n"
+        "2. Technical Summary\n"
+        "3. Key Takeaways"
+    )
 
-    context = "\n".join(results["documents"][0])
-
-    prompt = f"""
-Using ONLY the provided context, generate:
-
-1. Executive Summary
-2. Technical Summary
-3. Key Takeaways
-
-Context:
-{context}
-"""
-
-    summary = ask_gemini(prompt, "Generate the summaries.")
+    summary = ask_gemini("\n".join(chunks), question)
 
     return {
+        "document_id": request.document_id,
         "summary": summary
     }

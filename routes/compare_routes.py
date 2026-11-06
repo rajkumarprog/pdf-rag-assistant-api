@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from src.embeddings.embedding_generator import model
@@ -12,7 +12,9 @@ router = APIRouter(
 
 
 class CompareRequest(BaseModel):
-    question: str
+    document_id_1: str
+    document_id_2: str
+    question: str = "Compare the main ideas of these documents."
 
 
 @router.post("/compare")
@@ -20,26 +22,24 @@ def compare_documents(request: CompareRequest):
 
     query_embedding = model.encode(request.question)
 
-    results = search_chunks(query_embedding)
+    sections = []
+    for label, doc_id in (("Document 1", request.document_id_1),
+                          ("Document 2", request.document_id_2)):
+        results = search_chunks(query_embedding, top_k=4, document_ids=[doc_id])
+        chunks = results["documents"][0]
+        if not chunks:
+            raise HTTPException(
+                status_code=404,
+                detail=f"{label} ({doc_id}) not found or not indexed"
+            )
+        sections.append(f"### {label}\n" + "\n".join(chunks))
 
-    context = "\n".join(results["documents"][0])
+    question = (
+        f"{request.question}\n\n"
+        "Return:\n- Similarities\n- Differences\n- Final Conclusion"
+    )
 
-    prompt = f"""
-Compare the documents based ONLY on the context below.
-
-Context:
-{context}
-
-Question:
-{request.question}
-
-Return:
-- Similarities
-- Differences
-- Final Conclusion
-"""
-
-    answer = ask_gemini(prompt, request.question)
+    answer = ask_gemini("\n\n".join(sections), question)
 
     return {
         "comparison": answer
