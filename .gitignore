@@ -1,21 +1,21 @@
-# Virtual Environment
+# Virtual environment
 venv/
+.venv/
 
 # Python cache
 __pycache__/
 *.pyc
+.pytest_cache/
 
 # Environment variables
 .env
 
-# Local database
+# Local data (uploaded PDFs, database, vector store)
 documents.db
-
-# ChromaDB storage
 chroma_db/
+data/
 
-# VS Code
+# Editors / OS
 .vscode/
-
-# Python cache folders
-.pytest_cache/
+.idea/
+.DS_Store
