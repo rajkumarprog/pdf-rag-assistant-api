@@ -11,7 +11,7 @@ Built with **Python, FastAPI, SQLAlchemy, SQLite, ChromaDB, Sentence Transformer
 - Generate embeddings with Sentence Transformers and store them in ChromaDB
 - Ask questions and get answers based only on your documents
 - Summarize a document or compare two documents
-- Basic usage analytics endpoint
+- Simple analytics endpoint (document count)
 - Interactive API docs (Swagger UI) out of the box
 
 ## How it works
@@ -68,12 +68,22 @@ Open **http://127.0.0.1:8000/docs** to try every endpoint from the browser.
 
 | Method | Endpoint | Description |
 |---|---|---|
-| POST | `/documents/upload` | Upload a PDF |
-| GET | `/documents/` | List uploaded documents |
-| POST | `/chat/` | Ask a question about your documents |
-| POST | `/documents/summary` | Summarize a document |
-| POST | `/documents/compare` | Compare two documents |
-| GET | `/analytics/` | Usage statistics |
+| POST | `/documents/upload` | Upload a PDF; it is extracted, chunked, embedded and indexed immediately |
+| GET | `/documents/` | List uploaded documents and their status (`Indexed` / `Failed`) |
+| POST | `/chat/` | Ask a question across all documents, or pass `document_ids` to limit the search |
+| POST | `/documents/summary` | Summarize one document (`{"document_id": "..."}`) |
+| POST | `/documents/compare` | Compare two documents (`document_id_1`, `document_id_2`, optional `question`) |
+| GET | `/analytics/` | Number of uploaded documents |
+
+Example:
+
+```bash
+curl -F "file=@report.pdf" http://127.0.0.1:8000/documents/upload
+# -> {"document_id": "…", "chunks": 42, ...}
+
+curl -X POST http://127.0.0.1:8000/chat/ -H "Content-Type: application/json" \
+     -d '{"question": "What are the key findings?"}'
+```
 
 ## Quick pipeline test (without the API)
 

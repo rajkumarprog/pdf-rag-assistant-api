@@ -22,7 +22,7 @@ def main():
     text = extract_text(pdf_path)
     chunks = chunk_text(text)
     embeddings = generate_embeddings(chunks)
-    store_chunks(chunks, embeddings)
+    store_chunks(chunks, embeddings, "test_pdf")
 
     query_embedding = model.encode(question)
     results = search_chunks(query_embedding)
